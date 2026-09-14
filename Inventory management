@@ -12,12 +12,64 @@ def calculate_total_value(inventory):
         total += item[1] * item[2]
     return total
 
-def display_inventory(inventory):
-    inventory.sort()
-    print("\nCurrent Inventory:")
-    for item in inventory:
+def get_paginated_inventory(inventory, page=1, page_size=10):
+    """
+    Retrieves a paginated slice of inventory items along with pagination metadata.
+    """
+    sorted_inventory = sorted(inventory, key=lambda x: x[0])
+    total_items = len(sorted_inventory)
+    
+    page = max(1, int(page))
+    page_size = max(1, int(page_size))
+    
+    total_pages = (total_items + page_size - 1) // page_size if total_items > 0 else 1
+    
+    offset = (page - 1) * page_size
+    paginated_items = sorted_inventory[offset:offset + page_size]
+    
+    return {
+        "items": paginated_items,
+        "page": page,
+        "page_size": page_size,
+        "total_items": total_items,
+        "total_pages": total_pages
+    }
+
+def display_inventory(inventory, page=1, page_size=10):
+    pagination = get_paginated_inventory(inventory, page, page_size)
+    print(f"\nCurrent Inventory (Page {pagination['page']} of {pagination['total_pages']}, Total Items: {pagination['total_items']}):")
+    for item in pagination["items"]:
         print(f"Item: {item[0]}, Quantity: {item[1]}, Price: {item[2]}")
     print(f"Total Inventory Value: {calculate_total_value(inventory)}")
+    return pagination
+
+def run_tests():
+    test_inv = [
+        ("Item A", 10, 2.5),
+        ("Item B", 5, 10.0),
+        ("Item C", 20, 1.0),
+        ("Item D", 15, 3.0),
+        ("Item E", 8, 4.0)
+    ]
+    
+    # Test page 1 with limit 2
+    res = get_paginated_inventory(test_inv, page=1, page_size=2)
+    assert len(res["items"]) == 2
+    assert res["page"] == 1
+    assert res["total_items"] == 5
+    assert res["total_pages"] == 3
+    assert res["items"][0][0] == "Item A"
+    
+    # Test last page
+    res = get_paginated_inventory(test_inv, page=3, page_size=2)
+    assert len(res["items"]) == 1
+    assert res["items"][0][0] == "Item E"
+    
+    # Test out-of-bounds page
+    res = get_paginated_inventory(test_inv, page=10, page_size=2)
+    assert len(res["items"]) == 0
+    
+    print("All tests passed successfully.")
 
 def main():
     inventory = []
@@ -37,11 +89,16 @@ def main():
             item_name = input("Enter item name to remove: ")
             inventory = remove_item(inventory, item_name)
         elif choice == '3':
-            display_inventory(inventory)
+            page_str = input("Enter page number (default 1): ")
+            page = int(page_str) if page_str.strip().isdigit() else 1
+            limit_str = input("Enter page size/limit (default 10): ")
+            page_size = int(limit_str) if limit_str.strip().isdigit() else 10
+            display_inventory(inventory, page=page, page_size=page_size)
         elif choice == '4':
             print("Exiting program.")
             break
         else:
             print("Invalid choice. Please try again.")
 
-main()
+if __name__ == '__main__':
+    main()
